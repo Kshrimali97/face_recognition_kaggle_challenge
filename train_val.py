@@ -8,7 +8,7 @@ from PIL import Image
 import os
 
 # load the dataset into a pandas dataframe
-df = pd.read_csv(os.path.join(os.getcwd(), "train_small.csv"), index_col=False)
+df = pd.read_csv(os.path.join(os.getcwd(), "train.csv"), index_col=False)
 
 
 # create a custom dataset class to read the data and create an iterable (image, label) pair
@@ -43,9 +43,7 @@ transform = transforms.Compose(
 )
 
 # create a dataloader to iterate over the dataset
-dataset = CustomDataset(
-    csv_file="train_small.csv", root_dir="train_small", transform=transform
-)
+dataset = CustomDataset(csv_file="train.csv", root_dir="train", transform=transform)
 dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
 
@@ -126,3 +124,22 @@ for epoch in range(num_epochs):
 
 # save the model
 torch.save(model.state_dict(), "facial_recognition_model_kanika.pth")
+
+# output the predictions on the validation set
+model.eval()
+predictions = []
+with torch.no_grad():
+    for data, targets in val_loader:
+        data.to(device)
+        targets.to(device)
+
+        outputs = model(data)
+        _, predicted = torch.max(outputs, 1)
+        predictions.append(predicted)
+
+# output the predictions to a csv file with the image id and the predicted label
+predictions = torch.cat(predictions, 0)
+predictions_df = pd.DataFrame(
+    {"ID": val_dataset.dataset.csv.iloc[:, 0], "Category": predictions}
+)
+predictions_df.to_csv("predictions.csv", index=False)
