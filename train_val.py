@@ -127,9 +127,33 @@ torch.save(model.state_dict(), "facial_recognition_model_kanika.pth")
 
 # output the predictions on the validation set
 model.eval()
-predictions = []
+predictions_val = []
 with torch.no_grad():
     for data, targets in val_loader:
+        data.to(device)
+        targets.to(device)
+
+        outputs = model(data)
+        _, predicted = torch.max(outputs, 1)
+        predictions_val.append(predicted)
+
+# output the predictions to a csv file with the image id and the predicted label
+predictions_val = torch.cat(predictions_val, 0)
+predictions_df_val = pd.DataFrame(
+    {"ID": val_dataset.dataset.csv.iloc[:, 0], "Category": predictions_val}
+)
+predictions_df_val.to_csv("predictions_val.csv", index=False)
+
+
+# load the testing dataset (we create a dummy test.csv to basically mimic the train.csv file so as to ease dataloading)
+test_dataset = CustomDataset(csv_file="test.csv", root_dir="test", transform=transform)
+test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+
+# output the predictions on the test set
+model.eval()
+predictions = []
+with torch.no_grad():
+    for data, targets in test_loader:
         data.to(device)
         targets.to(device)
 
@@ -140,6 +164,6 @@ with torch.no_grad():
 # output the predictions to a csv file with the image id and the predicted label
 predictions = torch.cat(predictions, 0)
 predictions_df = pd.DataFrame(
-    {"ID": val_dataset.dataset.csv.iloc[:, 0], "Category": predictions}
+    {"ID": test_dataset.csv.iloc[:, 0], "Category": predictions}
 )
-predictions_df.to_csv("predictions.csv", index=False)
+predictions_df.to_csv("kanika_kaggle_submission_1.csv", index=False)
