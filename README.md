@@ -11,3 +11,6 @@ This repository contains the code to train a face recognition model on a subset 
      ```
 All helper functions are contained within the scripts, allowing for standalone execution.
 
+## Bibliography
+
+1. VGG-Face Pytorch Github - https://github.com/prlz77/vgg-face.pytorch
