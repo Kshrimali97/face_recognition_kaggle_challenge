@@ -7,11 +7,9 @@ import pandas as pd
 from PIL import Image
 import os
 
-# load the dataset into a pandas dataframe
 df = pd.read_csv(os.path.join(os.getcwd(), "train.csv"), index_col=False)
 
 
-# create a custom dataset class to read the data and create an iterable (image, label) pair
 class CustomDataset(Dataset):
     def __init__(self, csv_file, root_dir, transform=None):
         self.csv = pd.read_csv(csv_file, index_col=False)
@@ -30,7 +28,6 @@ class CustomDataset(Dataset):
         return (image, label)
 
 
-# transform to apply to the images
 transform = transforms.Compose(
     [
         transforms.Resize((224, 224)),
@@ -42,12 +39,11 @@ transform = transforms.Compose(
     ]
 )
 
-# create a dataloader to iterate over the dataset
 dataset = CustomDataset(csv_file="train.csv", root_dir="train", transform=transform)
 dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
 
-num_classes = 100  # in the dataset. This needs to be added to the end of the model as a linear layer with the number of classes as the output
+num_classes = 100
 model = models.vgg16(pretrained=True)
 num_features = model.classifier[6].in_features
 model.classifier[6] = nn.Linear(num_features, num_classes)
@@ -57,47 +53,38 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 num_epochs = 1000
-
-# device assignment
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# split the data into training and validation sets
 train_size = int(0.8 * len(dataset))
 val_size = len(dataset) - train_size
 train_dataset, val_dataset = torch.utils.data.random_split(
     dataset, [train_size, val_size]
 )
 
-# create dataloaders for training and validation
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=32, shuffle=True)
 
-# training loop
 for epoch in range(num_epochs):
     model.train()
     training_loss: float = 0.0
     for batch_idx, (data, targets) in enumerate(train_loader):
-        # Forward pass
         data.to(device)
         targets.to(device)
 
         outputs = model(data)
         loss = criterion(outputs, targets)
 
-        # Backward pass and optimization
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         training_loss += loss.item()
 
-        # Print progress
         if batch_idx % 100 == 0:
             print(
                 f"Epoch {epoch+1}/{num_epochs}, Batch {batch_idx}/{len(dataloader)}, Loss: {loss.item():.4f}"
             )
     training_loss /= len(train_loader)
 
-    # Validation loop
     model.eval()
     val_loss: float = 0.0
     correct_predictions: int = 0
@@ -122,10 +109,8 @@ for epoch in range(num_epochs):
         f"Epoch {epoch+1}/{num_epochs}, Training Loss: {training_loss:.4f}, Validation Loss: {val_loss:.4f}, Validation Accuracy: {accuracy:.4f}"
     )
 
-# save the model
 torch.save(model.state_dict(), "facial_recognition_model_kanika.pth")
 
-# output the predictions on the validation set
 model.eval()
 predictions_val = []
 with torch.no_grad():
@@ -137,7 +122,6 @@ with torch.no_grad():
         _, predicted = torch.max(outputs, 1)
         predictions_val.append(predicted)
 
-# output the predictions to a csv file with the image id and the predicted label
 predictions_val = torch.cat(predictions_val, 0)
 predictions_df_val = pd.DataFrame(
     {"ID": val_dataset.dataset.csv.iloc[:, 0], "Category": predictions_val}
@@ -161,7 +145,6 @@ with torch.no_grad():
         _, predicted = torch.max(outputs, 1)
         predictions.append(predicted)
 
-# output the predictions to a csv file with the image id and the predicted label
 predictions = torch.cat(predictions, 0)
 predictions_df = pd.DataFrame(
     {"ID": test_dataset.csv.iloc[:, 0], "Category": predictions}
